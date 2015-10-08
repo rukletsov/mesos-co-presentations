@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Scheduling & isolating with Mesos and DRF</title>
+
+  <meta charset="utf-8" />
+  <meta name="description" content="Scheduling & isolating with Mesos and DRF" />
+  <meta name="author" content="AlexR" />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <link rel="stylesheet" href="css/reveal.css" />
+  <link rel="stylesheet" href="css/theme/mesosphere.css" id="theme" />
+
+  <link href="font-awesome-4.3.0/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- For syntax highlighting -->
+  <link rel="stylesheet" href="lib/css/zenburn.css">
+
+  <!-- If the query includes 'print-pdf', include the PDF print sheet -->
+  <script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+  </script>
+
+  <!--[if lt IE 9]>
+  <script src="lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+
+  <div class="reveal">
+  <div class="slides">
+
+  <!-- Any section element inside of this container is displayed as a slide -->
+
+
+
+  <!-- Title -->
+  <section data-background="assets/heliocrystal.jpg">
+    <h1>Scheduling & isolating</h1>
+    <h2>with Mesos and DRF</h2>
+    <br>
+    <br>
+    <p>
+      Alexander Rukletsov
+      <br>
+      <small><a href="mailto:alex@mesosphere.com">alex@mesosphere.com</a></small>
+    </p>
+    <br>
+    <br>
+    <p>
+      <a href="http://mesos.apache.org">mesos.apache.org</a>
+      &nbsp;|&nbsp;
+      <a href="http://mesosphere.com">mesosphere.com</a>
+    </p>
+
+    <aside class="notes">
+      <p>Customer first: that's why the talk</p>
+      <p>Who has contributed to Mesos?</p>
+      <p>Who has written a Mesos framework?</p>
+      <p>Who has used or tried out Mesos?</p>
+      <p>Who has heard about Mesos?</p>
+      <p>Who has heard or familiar with other cluster managers, like Borg, Omega, Kubernetes, Yarn?</p>
+      <p>Try not to bore folks who are already familiar with Mesos and the ecosystem, nor lose people who are just jumping onto the ship</p>
+    </aside>
+  </section>
+
+
+
+  <!-- Intro -->
+  <section>
+
+    <section data-background="assets/matreshka_[lavka-podarkov.ru].jpg">
+      <div style="background-color: rgba(0, 0, 0, 0.5); color: #fff; padding: 20px;">
+        <h3>Apache Mesos is a distributed system for building and running other distributed systems</h3>
+      </div>
+      <div style="position: absolute; top: -150px; left: 0px; text-align: right; color">
+          <small>&copy; lavka-podarkov.ru</small>
+      </div>
+
+      <aside class="notes">
+        <p>Aurora, Cook, Jarvis, Marathon — all these general-purpose Mesos frameworks are complex distributed systems with distinct features and lots of users.</p>
+        <p>Distributed systems are hard, why re-invent the same thing all the time?</p>
+        <p>Mesos is general purpose, compare to YARN or k8s</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h2>Mesos lets us treat a cluster of nodes...</h2>
+      <img src="assets/cluster.png" />
+    </section>
+
+    <section>
+      <h2>... as <u>one big computer</u></h2>
+      <img style="width: 70%;" src="assets/dc.png" />
+    </section>
+
+    <section>
+      <table style="font-size: 6em; width: 100%;">
+      <tr>
+        <td style="text-align: center;">
+          <div>
+            <p><i class="fa fa-cube"></i></p>
+            <p style="font-size: 30px;">Not as individual machines</p>
+          </div>
+        </td>
+        <td style="text-align: center;">
+          <div class="fragment">
+            <p><i class="fa fa-cubes"></i></p>
+            <p style="font-size: 30px;">Not as VMs</p>
+          </div>
+        </td>
+      </tr>
+      </table>
+    </section>
+
+    <section data-background="assets/spices.jpg">
+      <div style="background-color: rgba(0, 0, 0, 0.5); color: #fff; padding: 20px;">
+        <h2>But as computational resources like cores, memory, disks, etc.</h2>
+      </div>
+
+      <aside class="notes">
+        <p>BenH: no nodes, a bus with pluggable components and common address space</p>
+      </aside>
+    </section>
+
+    <section>
+      <h3>Ridiculous?</h3>
+      <img style="width: 80%;" src="assets/windows_[unknown].png" />
+
+      <aside class="notes">
+        <p>This is how we operate datacenters now. Direction of evolution is clear?</p>
+        <p>Some, very few apps need to have the low-level control</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Mesos is...</h3>
+      <table>
+        <tr>
+          <td><i class="fa fa-users"></i></td>
+          <td>A top-level Apache project</td>
+        </tr>
+        <tr class="fragment">
+          <td><i class="fa fa-sitemap"></i></td>
+          <td>A cluster resource negotiator</td>
+        </tr>
+        <tr class="fragment">
+          <td><i class="fa fa-signal"></i></td>
+          <td>Scalable to 10,000s of nodes</td>
+        </tr>
+        <tr class="fragment">
+          <td><i class="fa fa-code-fork"></i></td>
+          <td>Supported and developed by Mesosphere, Twitter and other companies</td>
+        </tr>
+        <tr class="fragment">
+          <td><i class="fa fa-bomb"></i></td>
+          <td>Fault-tolerant, battle-tested</td>
+        </tr>
+        <tr class="fragment">
+          <td><i class="fa fa-indent"></i></td>
+          <td>An SDK for distributed apps</td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <img src="assets/Mesosphere-Adopters-for-dark.png" />
+    </section>
+
+  </section>
+
+
+
+  <!-- Mesos architecture -->
+  <section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h2>Mesos: Dichotomy</h2>
+      <table style="width: 100%;">
+        <tr>
+          <td style="text-align: center;">
+            <div class="fragment">
+              <img src="assets/superconducting_links_[CERN].jpg" />
+              <p>Plumbing</p>
+            </div>
+          </td>
+          <td style="text-align: center;">
+            <div class="fragment">
+              <img src="assets/resource-allocation.jpg" />
+              <p>Scheduling</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <aside class="notes">
+        <p>Not an official classification, but to let you better understand what problems Mesos is trying to solve</p>
+      </aside>
+    </section>
+
+  </section>
+
+
+
+  <!-- Plumbing -->
+  <section>
+
+    <section data-background="assets/superconducting_links_[CERN].jpg" data-background-transition="zoom" data-transition="fade-in fade-out">
+      <div style="background-color: rgba(0, 0, 0, 0.5); color: #fff; padding: 20px;">
+        <h2>MesosPlumbingWhat?</h2>
+      </div>
+      <div style="position: absolute; top: -150px; left: 0px; text-align: right; color">
+        <small>&copy; CERN</small>
+      </div>
+
+      <aside class="notes">
+        <p>Superconducting links on the picture are utterly important for the whole Collider, based on years of research, but are "just" part of the infrastructure</p>
+        <p>Same in Mesos; crucial but not exiting components: containerizers, isolators, task and artifact distribution, failure detection, monitoring, cleanup, etc</p>
+        <p>Something people know, expect, require</p>
+        <p>We touch executors and isolation only</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Custom executors</h3>
+      <ul>
+        <li class="fragment">
+          <span>What happens if a task is using more resources than allocated?</span>
+          <ul>
+            <li class="fragment">It "steals" resources from other tasks of the same executor</li>
+            <li class="fragment">The whole executor is limited (e.g. killed) if total usage exceeds the total allocation</li>
+          </ul>
+        </li>
+        <li class="fragment">
+          <span>What does a "kill task" request mean?</span>
+          <ul>
+            <li class="fragment">It is up to executor how to react</li>
+          </ul>
+        </li>
+        <li class="fragment">
+          <span>What is actually a task description (<code>TaskInfo</code>)?</span>
+          <ul>
+            <li class="fragment">It is up to executor how to treat it</li>
+            <li class="fragment">Dummy tasks to implicitly increase resource limits for running tasks</li>
+          </ul>
+        </li>
+        <li class="fragment">
+          <span>What is with IP per task?</span>
+          <ul>
+            <li class="fragment">It is actually IP per container, IP per task is very tricky</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Command executor (aka Mesos Executor)</h3>
+      <ul>
+        <li class="fragment">
+          <span>How to send a message to a task?</span>
+          <ul>
+            <li class="fragment">Impossible, <code>sendFrameworkMessage()</code> is not implemented</li>
+          </ul>
+        </li>
+        <li class="fragment">
+          <span>How to configure a custom clean-up action?</span>
+          <ul>
+            <li class="fragment">Impossible; current behaviour is <code>SIGTERM</code> followed by <code>SIGKILL</code></li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <div style="background-color: rgba(0, 0, 0, 0.5); color: #fff; padding: 20px;">
+        <h2>Tasks are virtual, containers are real</h2>
+      </div>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Delivery guarantees</h3>
+      <ul>
+        <li class="fragment">at-least-once vs. at-most-once</li>
+        <li class="fragment">TCP delivery receipt vs. processing the message</li>
+        <li class="fragment">What does HTTP API change?</li>
+      </ul>
+    </section>
+
+  </section>
+
+
+
+  <!-- Scheduling -->
+  <section>
+
+    <section data-background="assets/resource-allocation.jpg" data-background-transition="zoom" data-transition="fade-in fade-out">
+      <div style="background-color: rgba(0, 0, 0, 0.5); color: #fff; padding: 20px;">
+        <h2>Scheduling and Distributing Resources</h2>
+        <h3>(aka allocation)</h3>
+      </div>
+
+      <aside class="notes">
+        <p>Something people are not always aware of and usually do not ask for</p>
+        <p>Smart allocation can save you tons of money!</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>DRF: Dominant Resource Fairness</h3>
+      <br>
+      <p>Based on the research in Berkeley: <a href="http://static.usenix.org/events/nsdi11/tech/full_papers/Ghodsi.pdf">NSDI '11 paper</a></p>
+      <br>
+      <br>
+      <h2 class="fragment">But what is fair?</h2>
+
+      <aside class="notes">
+        <p>FCFS?</p>
+        <p>Dynamic even distribution?</p>
+        <p>Priorities?</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 1</h3>
+      <img src="assets/scen1_(2fra, 2agents, 1fra joins)_pt1.png" />
+
+      <aside class="notes">
+        <p>2 frameworks, 2 agents, 1 framework joins</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 1</h3>
+      <img src="assets/scen1_(2fra, 2agents, 1fra joins)_pt2.png" />
+
+      <aside class="notes">
+        <p>2 frameworks, 2 agents, 1 framework joins</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 2</h3>
+      <img src="assets/scen2_(3fra, 2agents).png" />
+
+      <aside class="notes">
+        <p>3 frameworks, 2 agents (granularity)</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 3</h3>
+      <img src="assets/scen3_(1fra modest, 1fra greedy)_pt1.png" />
+
+      <aside class="notes">
+        <p>1 production and 1 greedy framework (hogging resources)</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 3</h3>
+      <img src="assets/scen3_(1fra modest, 1fra greedy)_pt2.png" />
+
+      <aside class="notes">
+        <p>1 production and 1 greedy framework (hogging resources)</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg" data-background-transition="none" data-transition="none">
+      <h3>Allocation scenario 4</h3>
+      <img src="assets/scen4_(6fra, 2agents).png" />
+
+      <aside class="notes">
+        <p>5 declining frameworks, 1 starving, 2 agents (starvation)</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Future allocation scenarios</h3>
+      <ul>
+        <li class="fragment">Inverse offers</li>
+        <li class="fragment">Offers with revocable and non-revocable resources combined</li>
+      </ul>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Allocator mechanics</h3>
+      <img src="assets/allocator-overview.png" />
+
+      <aside class="notes">
+        <p>How to order frameworks (roles)</p>
+        <p>How to order agents</p>
+        <p>How to assign resources</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>DRF: Sorting frameworks (and roles)</h3>
+      <br>
+      <p>Entity $ e \leftarrow \{ frameworks \} \bigvee \{ roles \} $</p>
+      <p>Target: calculate $ e_{share} $</p>
+      <br>
+      <p>$ \forall \; \text{scalar resource} \; r: e_{share}(r) := \frac{e_{allocation}(r)}{\sum\limits_{\forall e}{r}} $</p>
+      <p>$ e_{share} := \max\limits_{r} \{e_{share}(r)\} $</p>
+      <br>
+      <p>Final ordering: $ \langle e_{share}, e_{allocations} \rangle $ </p>
+
+      <aside class="notes">
+        <p>Hierarchical ordering: roles, frameworks</p>
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Assumptions DRF makes</h3>
+      <ul>
+        <li>Frameworks are good citizens</li>
+        <li>Frameworks compete for resources</li>
+        <li>Agents are of similar size</li>
+        <li>Tasks will eventually end (for rebalancing)</li>
+        <li>Clusters are big (more agents than frameworks)</li>
+        <li>Only scalar resources contribute to fair share</li>
+      </ul>
+
+      <aside class="notes">
+      </aside>
+    </section>
+
+    <section data-background="assets/heliocrystal.jpg">
+      <h3>Alternative allocation policies</h3>
+      <ul>
+        <li class="fragment">Dominant Cumulative Resource Share: 2&#963;'s Cook <a href="https://github.com/twosigma/Cook">framework</a> and <a href="https://www.youtube.com/watch?v=BkBMYUe76oI">overview</a></li>
+        <li class="fragment">Resource guarantees and limits (quota): <a href="https://aurora.apache.org/">Apache Aurora framework</a></li>
+        <li class="fragment">Other existing alternatives?</li>
+      </ul>
+
+      <aside class="notes">
+        <p>Rebalancing requires preemption, is not generally possible (SLA), but works for twosigma</p>
+        <p>Heavy use of quota may impact utilization, and we are back to static partitioning</p>
+        <p>Does anyone know about a real scheduler that implements other alternatives?</p>
+      </aside>
+    </section>
+
+<section data-background="assets/heliocrystal.jpg">
+      <h3>Future improvements</h3>
+      <ul>
+        <li class="fragment">Persistent primitives & dynamic reservations: <a href="https://www.youtube.com/watch?v=HUML4Z8tb2o">MesosCon Seattle 2015 talk</a> by Jie Yu (Twitter) and Michael Park (Mesosphere)</li>
+        <li class="fragment">Oversubscription: <a href="https://mesosphere.com/blog/2015/08/26/turbocharging-your-mesos-cluster-with-oversubscription/">turbocharge your cluster</a></li>
+        <li class="fragment">Quota (WIP): <a href="https://issues.apache.org/jira/browse/MESOS-1791">design & overview</a></li>
+        <li class="fragment">Optimistic offers, inverse offers (WIP)</li>
+        <li class="fragment">Preemption</li>
+        <li class="fragment">Revocable resources</li>
+        <li class="fragment">Cluster-wide resources: <a href="https://issues.apache.org/jira/browse/MESOS-2728">overview</a></li>
+        <li class="fragment">Multi-role frameworks: <a href="https://issues.apache.org/jira/browse/MESOS-1763">overview</a></li>
+        <li class="fragment">Time-based reservations</li>
+      </ul>
+
+      <aside class="notes">
+      </aside>
+    </section>
+
+  </section>
+
+
+
+  </div>
+  </div>
+
+  <script src="lib/js/head.min.js"></script>
+  <script src="js/reveal.min.js"></script>
+
+  <script>
+
+    // Full list of configuration options available here:
+    // https://github.com/hakimel/reveal.js#configuration
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'linear', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Parallax scrolling
+        // parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+        // parallaxBackgroundSize: '2100px 900px',
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+            { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+            { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+            { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+            { src: 'plugin/notes/notes.js', async: true },
+
+            // MathJax
+            { src: 'plugin/math/math.js', async: true }
+        ]
+    });
+
+  </script>
+
+  <!--script>
+      window.analytics||(window.analytics=[]),window.analytics.methods=["identify","track","trackLink","trackForm","trackClick","trackSubmit","page","pageview","ab","alias","ready","group","on","once","off"],window.analytics.factory=function(t){return function(){var a=Array.prototype.slice.call(arguments);return a.unshift(t),window.analytics.push(a),window.analytics}};for(var i=0;i<window.analytics.methods.length;i++){var method=window.analytics.methods[i];window.analytics[method]=window.analytics.factory(method)}window.analytics.load=function(t){var a=document.createElement("script");a.type="text/javascript",a.async=!0,a.src=("https:"===document.location.protocol?"https://":"http://")+"d2dq2ahtl5zl1z.cloudfront.net/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(a,n)},window.analytics.SNIPPET_VERSION="2.0.8",
+      window.analytics.load("7sgtwqvuai");
+      window.analytics.page();
+  </script-->
+
+</body>
+</html>
