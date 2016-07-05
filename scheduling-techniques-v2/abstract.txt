@@ -1,0 +1,5 @@
+Scheduling techniques with Mesos and wDRF
+
+Operating apps at scale is the new normal, but is still out of reach for most companies. Modern cluster management systems enable mid-size and non-IT businesses to run their clusters in a similar way Google does. Efficient scheduling of heterogenous workloads can significantly cut costs and reduce efforts required to maintain and run server infrastructure. During the talk, Alex will give a technical overview of the scheduling part of Mesos, demo of some of its capabilities (including experimental), and touch other cluster management systems.
+
+Alex Rukletsov is on the Mesosphere core team in Hamburg and focuses on open source Apache Mesos. During the past years Alex was segmenting medical images and investigating behaviour of human vessels in several German research institutes. His areas of interests include distributed systems, object recognition, probabilistic and heuristic algorithms.
